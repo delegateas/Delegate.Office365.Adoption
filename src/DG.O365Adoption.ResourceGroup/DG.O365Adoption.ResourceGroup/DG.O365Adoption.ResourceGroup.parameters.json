@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "collation": {
+      "value": "SQL_Latin1_General_CP1_CI_AS"
+    },
+    "TimerJobInterval": {
+      "value": "60000"
+    },  
+    "microsoftAppId": { "value": "YourAppId" },
+    "microsoftAppPassword": { "value": "YourAppPassword" },
+    "baseUrl": { "value": "https://directline.botframework.com/" },
+    "directLineAuthToken": { "value": "YourDirectLineAuthToken" },
+    "redirectUri": { "value": "YourRedirectUri" },
+    "autoDiscoveryUri": { "value": "https://webdir.online.lync.com/autodiscover/autodiscoverservice.svc/root" },
+    "discoveryresource": { "value": "https://webdir.online.lync.com" },
+    "aadInstance": { "value": "https://login.microsoftonline.com/{0}" },
+    "username": { "value": "YourUsername" },
+    "password": { "value": "YourPassword" },
+    "clientId": { "value": "YourClinetId" },
+    "tenant": { "value": "YourTenant" }
+  }
+}

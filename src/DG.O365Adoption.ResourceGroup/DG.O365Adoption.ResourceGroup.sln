@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "DG.O365Adoption.ResourceGroup", "DG.O365Adoption.ResourceGroup\DG.O365Adoption.ResourceGroup.deployproj", "{D553ABA7-37F5-4AA4-8C18-0B6434D4A186}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D553ABA7-37F5-4AA4-8C18-0B6434D4A186}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D553ABA7-37F5-4AA4-8C18-0B6434D4A186}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D553ABA7-37F5-4AA4-8C18-0B6434D4A186}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D553ABA7-37F5-4AA4-8C18-0B6434D4A186}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,196 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "collation": {
+      "type": "string"
+    },
+    "serviceplanSKU": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Free",
+        "Shared",
+        "Basic",
+        "Standard",
+        "Premium"
+      ]
+    },
+    "serviceplanWorkerSize": {
+      "type": "string",
+      "allowedValues": [
+        "0",
+        "1",
+        "2"
+      ],
+      "defaultValue": "0"
+    },
+    "sqlEdition": {
+      "type": "string",
+      "defaultValue": "Basic"
+    },
+    "TimerJobInterval": {
+      "type": "string"
+    },
+    "microsoftAppId": { "type": "string" },
+    "microsoftAppPassword": { "type": "string" },
+    "baseUrl": { "type": "string" },
+    "directLineAuthToken": { "type": "string" },
+    "redirectUri": { "type": "string" },
+    "autoDiscoveryUri": { "type": "string" },
+    "discoveryresource": { "type": "string" },
+    "aadInstance": { "type": "string" },
+    "username": { "type": "string" },
+    "password": { "type": "string" },
+    "clientId": { "type": "string" },
+    "tenant": { "type": "string" }
+  },
+  "variables": {
+    "sqlserverName": "[concat('dgadoptionsqlserver', uniqueString(resourceGroup().id))]",
+    "storageAccountName": "[concat('dgadoptionstorage', uniqueString(resourceGroup().id))]",
+    "databaseName": "[concat('/dgadoptionengine', uniqueString(resourceGroup().id))]",
+    "administratorLogin": "[concat('admin', uniqueString(resourceGroup().id))]",
+    "administratorLoginPassword": "uniqueString(resourceGroup().id)",
+    "serviceplanName": "[concat('adoptionbotfarm',uniqueString(resourceGroup().id))]",
+    "webappName": "[concat('dgadoptionruleengine', uniqueString(resourceGroup().id))]",
+    "botappName": "[concat('dgadoptionbot', uniqueString(resourceGroup().id))]",
+    "NotificationURI": "[concat('https://',variables('webappName'),'azurewebsites.net/api/start')]",
+    "AzureConnectionString": "[concat('Server=tcp:',variables('databaseName'),'.database.windows.net,1433;Initial Catalog=',variables('sqlserverName'),';Persist Security Info=False;User ID=',variables('administratorLogin'),';Password=',variables('administratorLoginPassword'),';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
+  },
+  "resources": [
+    {
+      "name": "[variables('serviceplanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-06-01",
+      "properties": {
+        "name": "[variables('serviceplanName')]",
+        "sku": "[parameters('serviceplanSKU')]",
+        "workerSize": "[parameters('serviceplanWorkerSize')]",
+        "numberOfWorkers": 1
+      }
+    },
+    {
+      "name": "[variables('webappName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('serviceplanName'))]": "Resource",
+        "displayName": "webapp"
+      },
+      "properties": {
+        "name": "[variables('webappName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+      },
+      "resources": [
+        {
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', variables('webappName'))]"
+          ],
+          "tags": {
+            "displayName": "appsettings"
+          },
+          "properties": {
+            "AzureConnectionString": "[variables('AzureConnectionString')]",
+            "NotificationURI": "[variables('NotificationURI')]",
+            "TimerJobInterval": "[parameters('TimerJobInterval')]"
+          }
+        }
+      ]
+    },
+    {
+      "name": "[variables('sqlserverName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[resourceGroup().location]",
+      "kind": "v12.0",
+      "tags": {
+        "displayName": "SqlServer"
+      },
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "administratorLogin": "[variables('administratorLogin')]",
+        "administratorLoginPassword": "[variables('administratorLoginPassword')]"
+      },
+      "dependsOn": [ ],
+      "resources": [ ]
+    },
+    {
+      "name": "[concat(variables('sqlserverName'),variables('databaseName'))]",
+      "type": "Microsoft.Sql/servers/databases",
+      "location": "[resourceGroup().location]",
+      "kind": "v12.0,user",
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "edition": "[parameters('sqlEdition')]",
+        "collation": "[parameters('collation')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
+      ],
+      "resources": [ ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "Storage",
+      "name": "[substring(variables('storageAccountName'),0,23)]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "properties": { }
+    },
+    {
+      "name": "[variables('botappName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "dependsOn": [
+        "[concat('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('serviceplanName'))]": "Resource",
+        "displayName": "botapp"
+      },
+      "properties": {
+        "name": "[variables('botappName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+      },
+      "resources": [
+        {
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', variables('botappName'))]"
+          ],
+          "tags": {
+            "displayName": "appsettings"
+          },
+          "properties": {
+            "MicrosoftAppId": "[parameters('microsoftAppId')]",
+            "MicrosoftAppPassword": "[parameters('microsoftAppPassword')]",
+            "BaseUrl": "[parameters('baseUrl')]",
+            "DirectLineAuthToken": "[parameters('directLineAuthToken')]",
+            "RedirectUri": "[parameters('redirectUri')]",
+            "AutoDiscoveryUri": "[parameters('autoDiscoveryUri')]",
+            "Resource": "[parameters('discoveryresource')]",
+            "AadInstance": "[parameters('aadInstance')]",
+            "Skype:Username": "[parameters('username')]",
+            "Skype:Password": "[parameters('password')]",
+            "Skype:ClientId": "[parameters('clientId')]",
+            "Skype:Tenant": "[parameters('tenant')]"
+          }
+        }
+      ]
+    }
+  ]
+}
