@@ -1,0 +1,165 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "serviceplanSKU": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Free",
+        "Shared",
+        "Basic",
+        "Standard",
+        "Premium"
+      ]
+    },
+    "functionAppName": {
+      "type": "string",
+      "defaultValue": "dalefunctions"
+    },
+    "serviceplanWorkerSize": {
+      "type": "string",
+      "allowedValues": [
+        "0",
+        "1",
+        "2"
+      ],
+      "defaultValue": "0"
+    }
+  },
+  "variables": {
+    "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
+    "serviceplanName": "[concat('dalefarm',uniqueString(resourceGroup().id))]",
+    "dynamicAppServicePlanName": "[concat('dynamic', uniqueString(resourceGroup().id))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "Storage",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "properties": { }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2015-04-01",
+      "name": "[variables('dynamicAppServicePlanName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "name": "[variables('dynamicAppServicePlanName')]",
+        "computeMode": "Dynamic",
+        "sku": "Dynamic"
+      }
+    },
+    {
+      "name": "[variables('serviceplanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-06-01",
+      "properties": {
+        "name": "[variables('serviceplanName')]",
+        "sku": "[parameters('serviceplanSKU')]",
+        "workerSize": "[parameters('serviceplanWorkerSize')]",
+        "numberOfWorkers": 1
+      },
+      "dependsOn": [ "[resourceId('Microsoft.Web/serverfarms', variables('dynamicAppServicePlanName'))]" ],
+      "tags": {
+        "displayName": "servicePlan"
+      }
+    },
+    {
+      "name": "[parameters('functionAppName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[resourceGroup().location]",
+      "kind": "functionapp",
+      "apiVersion": "2015-08-01",
+      "properties": {
+        "name": "[parameters('functionAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms/', variables('dynamicAppServicePlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+      ],
+
+      "resources": [
+        {
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites/', parameters('functionAppName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "FUNCTIONS_EXTENSION_VERSION": "latest"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "Notify",
+          "type": "functions",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+          ],
+          "properties": {
+            "config": {
+              "bindings": [
+                {
+                  "authLevel": "anonymous",
+                  "name": "req",
+                  "type": "httpTrigger",
+                  "direction": "in"
+                },
+                {
+                  "name": "res",
+                  "type": "http",
+                  "direction": "out"
+                }
+              ]
+            },
+            "files": {
+              "run.csx": "using System.Net;\r\nusing System.Configuration;\r\nusing System.Net.Http;\r\nusing Newtonsoft.Json;\r\nusing Dale;\r\npublic static HttpResponseMessage Run(HttpRequestMessage req, TraceWriter log)\r\n{\r\n    log.Info( \"Received message: \");\r\n    log.Info(req.Content.ReadAsStringAsync().Result);\r\n    log.Info(\"EOF\");\r\n\r\n    var conf = Dale.Config.Create(\r\n      ConfigurationManager.AppSettings[\"Tenant\"],\r\n      ConfigurationManager.AppSettings[\"ClientId\"],\r\n      ConfigurationManager.AppSettings[\"ClientSecret\"],\r\n      ConfigurationManager.AppSettings[\"AzureConnectionString\"],\r\n      ConfigurationManager.AppSettings[\"AzureQueueName\"],\r\n      ConfigurationManager.AppSettings[\"RedactedFields\"]);\r\n\r\n    return new Dale.Exporter(conf).Handle(req);\r\n}"
+            }
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "ReadQueue",
+          "type": "functions",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+          ],
+          "properties": {
+            "config": {
+              "bindings": [
+                {
+                  "authLevel": "anonymous",
+                  "name": "req",
+                  "type": "httpTrigger",
+                  "direction": "in"
+                },
+                {
+                  "name": "res",
+                  "type": "http",
+                  "direction": "out"
+                }
+              ]
+            },
+            "files": {
+              "run.csx": "using System.Net;\r\nusing System.Configuration;\r\nusing Microsoft.Azure.WebJobs.Host;\r\nusing FSharp.Azure.Storage;\r\nusing Dale;\r\npublic static void Run(string message, TraceWriter log)\r\n{\r\n    log.Info(\"Processing batch : \" + message);\r\n\r\n    var conf = Dale.Config.Create(\r\n      ConfigurationManager.AppSettings[\"Tenant\"],\r\n      ConfigurationManager.AppSettings[\"ClientId\"],\r\n      ConfigurationManager.AppSettings[\"ClientSecret\"],\r\n      ConfigurationManager.AppSettings[\"AzureConnectionString\"],\r\n      ConfigurationManager.AppSettings[\"AzureQueueName\"],\r\n      ConfigurationManager.AppSettings[\"RedactedFields\"]);\r\n\r\n    var res = new Dale.Exporter(conf).ExportWithException(message);\r\n    foreach(string s in res) {\r\n      log.Info(s);\r\n    }\r\n}"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": { }
+}

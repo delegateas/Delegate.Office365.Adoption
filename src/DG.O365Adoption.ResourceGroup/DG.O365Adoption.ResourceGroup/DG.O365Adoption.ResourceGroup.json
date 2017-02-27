@@ -47,7 +47,6 @@
   },
   "variables": {
     "sqlserverName": "[concat('dgadoptionsqlserver', uniqueString(resourceGroup().id))]",
-    "storageAccountName": "[concat('dgadoptionstorage', uniqueString(resourceGroup().id))]",
     "databaseName": "[concat('/dgadoptionengine', uniqueString(resourceGroup().id))]",
     "administratorLogin": "[concat('admin', uniqueString(resourceGroup().id))]",
     "administratorLoginPassword": "uniqueString(resourceGroup().id)",
@@ -135,18 +134,6 @@
         "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
       ],
       "resources": [ ]
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts",
-      "sku": {
-        "name": "Standard_LRS",
-        "tier": "Standard"
-      },
-      "kind": "Storage",
-      "name": "[substring(variables('storageAccountName'),0,23)]",
-      "apiVersion": "2016-01-01",
-      "location": "[resourceGroup().location]",
-      "properties": { }
     },
     {
       "name": "[variables('botappName')]",
