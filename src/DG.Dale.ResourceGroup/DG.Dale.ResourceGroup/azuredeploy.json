@@ -157,6 +157,34 @@
               "run.csx": "using System.Net;\r\nusing System.Configuration;\r\nusing Microsoft.Azure.WebJobs.Host;\r\nusing FSharp.Azure.Storage;\r\nusing Dale;\r\npublic static void Run(string message, TraceWriter log)\r\n{\r\n    log.Info(\"Processing batch : \" + message);\r\n\r\n    var conf = Dale.Config.Create(\r\n      ConfigurationManager.AppSettings[\"Tenant\"],\r\n      ConfigurationManager.AppSettings[\"ClientId\"],\r\n      ConfigurationManager.AppSettings[\"ClientSecret\"],\r\n      ConfigurationManager.AppSettings[\"AzureConnectionString\"],\r\n      ConfigurationManager.AppSettings[\"AzureQueueName\"],\r\n      ConfigurationManager.AppSettings[\"RedactedFields\"]);\r\n\r\n    var res = new Dale.Exporter(conf).ExportWithException(message);\r\n    foreach(string s in res) {\r\n      log.Info(s);\r\n    }\r\n}"
             }
           }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "Subscribe",
+          "type": "functions",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+          ],
+          "properties": {
+            "config": {
+              "bindings": [
+                {
+                  "authLevel": "anonymous",
+                  "name": "req",
+                  "type": "httpTrigger",
+                  "direction": "in"
+                },
+                {
+                  "name": "res",
+                  "type": "http",
+                  "direction": "out"
+                }
+              ]
+            },
+            "files": {
+              "run.fsx": "open System\r\nopen System.Configuration\r\nopen FSharp.Data\r\nopen FSharp.Data.HttpRequestHeaders\r\nopen JWT\r\n\r\nlet fetchAuthToken clientId clientSecret tenant =\r\n  let url = \"https://login.microsoftonline.com/\" + tenant + \"/oauth2/token\"\r\n  let json =\r\n    Http.RequestString(url,\r\n                       headers=[Accept \"application/json\"],\r\n                       body=FormValues [\"grant_type\", \"client_credentials\";\r\n                                         \"client_id\", clientId;\r\n                                         \"client_secret\", clientSecret;\r\n                                         \"resource\", \"https://manage.office.com\"])\r\n\r\n  let res = JsonValue.Parse json\r\n  let token = res.GetProperty(\"access_token\").AsString()\r\n  token\r\n\r\n\r\nlet subscribe (log :TraceWriter) webhook authId tenantId token contentType =\r\n  let url = \"https://manage.office.com/api/v1.0/\" + tenantId +\r\n            \"/activity/feed/subscriptions/start\"\r\n  let reqbody =\r\n   \"{'webhook': {\"  +\r\n      \"'address': '\" + webhook + \"', \" +\r\n      \"'authId': '\" + authId + \"', \" +\r\n      \"'expiration': ''\" +\r\n      \"}}\"\r\n\r\n  let resp =\r\n    Http.Request(url,\r\n                 headers = [Accept \"application/json\";\r\n                            Authorization token;\r\n                            ContentType HttpContentTypes.Json],\r\n                 query = [\"contentType\", contentType],\r\n                 body = TextRequest reqbody)\r\n  log.Info(sprintf \"Subscribing to %s: HTTP %i\" contentType resp.StatusCode)\r\n\r\n\r\nlet Run(input: string, log: TraceWriter) =\r\n  let tenant = Environment.GetEnvironmentVariable(\"APPSETTING_Tenant\")\r\n  let clientId = Environment.GetEnvironmentVariable(\"APPSETTING_ClientId\")\r\n  let clientSecret =  Environment.GetEnvironmentVariable(\"APPSETTING_ClientSecret\")\r\n  let webHookUrl = \"https://\" + Environment.GetEnvironmentVariable(\"WEBSITE_HOSTNAME\") + \"/api/Notify\"\r\n\r\n  let authId = clientId\r\n  let jwt = fetchAuthToken clientId clientSecret tenant\r\n  let token = \"Bearer \" + jwt\r\n  let tenantId = JsonValue.Parse(JsonWebToken.Decode(jwt, \"\", false)).[\"tid\"].AsString()\r\n\r\n  let subscribe' = subscribe log webHookUrl authId tenantId token\r\n  subscribe' \"Audit.SharePoint\"\r\n  subscribe' \"Audit.Exchange\"\r\n  subscribe' \"Audit.AzureActiveDirectory\"\r\n  subscribe' \"Audit.General\""
+            }
+          }
         }
       ]
     }
