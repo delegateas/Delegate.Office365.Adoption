@@ -13,6 +13,9 @@
         "Premium"
       ]
     },
+    "siteLocation": {
+      "type": "string"
+    },
     "baseUrl": {
       "type": "string",
       "defaultValue": "https://raw.githubusercontent.com/delegateas/Delegate.Office365.Adoption/master/src/DG.Dale.ResourceGroup/DG.Dale.ResourceGroup/subtemplates/"
