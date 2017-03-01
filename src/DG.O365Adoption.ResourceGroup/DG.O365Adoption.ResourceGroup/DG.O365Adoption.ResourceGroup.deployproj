@@ -28,9 +28,9 @@
     <None Include="Deployment.targets">
       <Visible>False</Visible>
     </None>
-    <Content Include="DG.O365Adoption.ResourceGroup.parameters.json" />
+    <Content Include="azuredeploy.parameters.json" />
     <Content Include="Deploy-AzureResourceGroup.ps1" />
-    <Content Include="DG.O365Adoption.ResourceGroup.json" />
+    <Content Include="azuredeploy.json" />
   </ItemGroup>
   <Target Name="GetReferenceAssemblyPaths" />
 </Project>

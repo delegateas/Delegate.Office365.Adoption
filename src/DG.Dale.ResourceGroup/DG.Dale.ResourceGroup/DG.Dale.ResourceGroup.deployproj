@@ -27,6 +27,8 @@
   <ItemGroup>
     <Content Include="azuredeploy.json" />
     <Content Include="azuredeploy.parameters.json" />
+    <Content Include="subtemplates\dynamicfarm.json" />
+    <Content Include="subtemplates\standardfarm.json" />
     <None Include="Deployment.targets">
       <Visible>False</Visible>
     </None>

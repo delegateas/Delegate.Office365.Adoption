@@ -13,9 +13,8 @@
         "Premium"
       ]
     },
-    "functionAppName": {
-      "type": "string",
-      "defaultValue": "dalefunctions"
+    "baseUrl": {
+      "type": "string"
     },
     "serviceplanWorkerSize": {
       "type": "string",
@@ -25,12 +24,20 @@
         "2"
       ],
       "defaultValue": "0"
+    },
+    "farmPlan": {
+      "type": "string",
+      "allowedValues": [
+        "Dynamic",
+        "Standard"
+      ],
+      "defaultValue": "Dynamic"
     }
   },
   "variables": {
-    "storageAccountName": "[concat('storage', uniqueString(resourceGroup().id))]",
-    "serviceplanName": "[concat('dalefarm',uniqueString(resourceGroup().id))]",
-    "dynamicAppServicePlanName": "[concat('dynamic', uniqueString(resourceGroup().id))]"
+    "storageAccountName": "[concat('dalestorage', uniqueString(resourceGroup().id))]",
+    "functionAppName": "[concat('dalefunctions', uniqueString(resourceGroup().id))]",
+    "serviceplanName": "[concat(tolower(parameters('farmPlan')),'dalefarm',uniqueString(resourceGroup().id))]",
   },
   "resources": [
     {
@@ -48,42 +55,31 @@
     {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2015-04-01",
-      "name": "[variables('dynamicAppServicePlanName')]",
       "location": "[resourceGroup().location]",
-      "properties": {
-        "name": "[variables('dynamicAppServicePlanName')]",
-        "computeMode": "Dynamic",
-        "sku": "Dynamic"
-      }
-    },
-    {
       "name": "[variables('serviceplanName')]",
-      "type": "Microsoft.Web/serverfarms",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2014-06-01",
       "properties": {
-        "name": "[variables('serviceplanName')]",
-        "sku": "[parameters('serviceplanSKU')]",
-        "workerSize": "[parameters('serviceplanWorkerSize')]",
-        "numberOfWorkers": 1
-      },
-      "dependsOn": [ "[resourceId('Microsoft.Web/serverfarms', variables('dynamicAppServicePlanName'))]" ],
-      "tags": {
-        "displayName": "servicePlan"
+        "templateLink": {
+          "uri": "[concat(parameters('baseUrl'),tolower(parameters('farmPlan')),'dalefarm.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "computeMode": "[parameters('farmPlan')]",
+        "sku": "[parameters('farmPlan')]"
+
       }
     },
+
     {
-      "name": "[parameters('functionAppName')]",
+      "name": "[variables('functionAppName')]",
       "type": "Microsoft.Web/sites",
       "location": "[resourceGroup().location]",
       "kind": "functionapp",
       "apiVersion": "2015-08-01",
       "properties": {
-        "name": "[parameters('functionAppName')]",
+        "name": "[variables('functionAppName')]",
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms/', variables('dynamicAppServicePlanName'))]",
+        "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
 
@@ -93,7 +89,7 @@
           "type": "config",
           "apiVersion": "2015-08-01",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites/', parameters('functionAppName'))]",
+            "[resourceId('Microsoft.Web/sites/', variables('functionAppName'))]",
             "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
           ],
           "properties": {
@@ -107,7 +103,7 @@
           "name": "Notify",
           "type": "functions",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
           ],
           "properties": {
             "config": {
@@ -135,7 +131,7 @@
           "name": "ReadQueue",
           "type": "functions",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
           ],
           "properties": {
             "config": {
@@ -163,7 +159,7 @@
           "name": "Subscribe",
           "type": "functions",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
           ],
           "properties": {
             "config": {

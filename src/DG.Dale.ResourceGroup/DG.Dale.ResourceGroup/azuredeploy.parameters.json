@@ -2,5 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "baseUrl": { "value": "https://raw.githubusercontent.com/delegateas/Delegate.Office365.Adoption/master/src/DG.Dale.ResourceGroup/DG.Dale.ResourceGroup/subtemplates/" }
   }
 }
