@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "serviceplanSKU": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Free",
+        "Shared",
+        "Basic",
+        "Standard",
+        "Premium"
+      ]
+    },
+    "serviceplanWorkerSize": {
+      "type": "string",
+      "allowedValues": [
+        "0",
+        "1",
+        "2"
+      ],
+      "defaultValue": "0"
+    }   
+  },
+  "variables": {
+    "serviceplanName": "[concat('standarddalefarm',uniqueString(resourceGroup().id))]"  
+  },
+  "resources": [
+    {
+      "name": "[variables('serviceplanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-06-01",
+      "properties": {
+        "name": "[variables('serviceplanName')]",
+        "sku": "[parameters('serviceplanSKU')]",
+        "workerSize": "[parameters('serviceplanWorkerSize')]"
+      },      
+      "tags": {
+        "displayName": "servicePlan"
+      }      
+    }
+  ],
+  "outputs": {
+    "serviceplanName": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Web/serverfarms',variables('serviceplanName'))]"
+    }
+  }
+}
