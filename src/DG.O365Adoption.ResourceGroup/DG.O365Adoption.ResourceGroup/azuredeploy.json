@@ -43,9 +43,13 @@
     "username": { "type": "string" },
     "password": { "type": "string" },
     "clientId": { "type": "string" },
-    "tenant": { "type": "string" }
+    "tenant": { "type": "string" },
+    "webDeployPackageUri": {
+      "type": "string","defaultValue": ""
+    }
   },
   "variables": {
+    "storageAccountName": "[concat('dgadoption', uniqueString(resourceGroup().id))]",
     "sqlserverName": "[concat('dgadoptionsqlserver', uniqueString(resourceGroup().id))]",
     "databaseName": "[concat('/dgadoptionengine', uniqueString(resourceGroup().id))]",
     "administratorLogin": "[concat('admin', uniqueString(resourceGroup().id))]",
@@ -57,6 +61,18 @@
     "AzureConnectionString": "[concat('Server=tcp:',variables('databaseName'),'.database.windows.net,1433;Initial Catalog=',variables('sqlserverName'),';Persist Security Info=False;User ID=',variables('administratorLogin'),';Password=',variables('administratorLoginPassword'),';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
   },
   "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "Storage",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "properties": { }
+    },
     {
       "name": "[variables('serviceplanName')]",
       "type": "Microsoft.Web/serverfarms",
@@ -101,6 +117,26 @@
             "NotificationURI": "[variables('NotificationURI')]",
             "TimerJobInterval": "[parameters('TimerJobInterval')]"
           }
+        },
+        {
+            "name": "MSDeploy",
+            "type": "extensions",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2015-08-01",
+            "dependsOn": [
+                "[concat('Microsoft.Web/sites/', variables('webappName'))]"
+            ],
+            "tags": {
+                "displayName": "webDeploy"
+            },
+            "properties": {
+                "packageUri": "[parameters('webDeployPackageUri')]",
+                "dbType": "None",
+                "connectionString": "",
+                "setParameters": {
+                  "IIS Web Application Name": "[variables('webappName')]"
+                }
+            }
         }
       ]
     },
