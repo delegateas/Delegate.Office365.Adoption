@@ -29,9 +29,6 @@
       "type": "string",
       "defaultValue": "Basic"
     },
-    "TimerJobInterval": {
-      "type": "string"
-    },
     "microsoftAppId": { "type": "string" },
     "microsoftAppPassword": { "type": "string" },
     "baseUrl": { "type": "string" },
@@ -42,26 +39,33 @@
     "aadInstance": { "type": "string" },
     "username": { "type": "string" },
     "password": { "type": "string" },
-    "clientId": { "type": "string" },
-    "tenant": { "type": "string" },
+    "skypeClientId": { "type": "string" },
+    "skypeTenant": { "type": "string" },
     "webDeployPackageUri": {
-      "type": "string","defaultValue": ""
-    }
+      "type": "string",
+      "defaultValue": ""
+    },
+    "resourceUrl": { "type": "string" },
+    "tenant": { "type": "string" },
+    "clientId": { "type": "string" },
+    "clientSecret": { "type": "string" }
   },
   "variables": {
     "storageAccountName": "[concat('dgadoption', uniqueString(resourceGroup().id))]",
+    "timerjobStorageAccountName": "[concat('dgadoptionwebjob', uniqueString(resourceGroup().id))]",
     "sqlserverName": "[concat('dgadoptionsqlserver', uniqueString(resourceGroup().id))]",
-    "databaseName": "[concat('/dgadoptionengine', uniqueString(resourceGroup().id))]",
+    "databaseName": "[concat('dgadoptionengine', uniqueString(resourceGroup().id))]",
     "administratorLogin": "[concat('admin', uniqueString(resourceGroup().id))]",
     "administratorLoginPassword": "uniqueString(resourceGroup().id)",
     "serviceplanName": "[concat('adoptionbotfarm',uniqueString(resourceGroup().id))]",
     "webappName": "[concat('dgadoptionruleengine', uniqueString(resourceGroup().id))]",
     "botappName": "[concat('dgadoptionbot', uniqueString(resourceGroup().id))]",
     "NotificationURI": "[concat('https://',variables('webappName'),'azurewebsites.net/api/start')]",
-    "AzureConnectionString": "[concat('Server=tcp:',variables('databaseName'),'.database.windows.net,1433;Initial Catalog=',variables('sqlserverName'),';Persist Security Info=False;User ID=',variables('administratorLogin'),';Password=',variables('administratorLoginPassword'),';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
+    "AzureConnectionString": "",/// ask!
+    "sqlConnectionString": "[concat('Server=tcp:',variables('sqlserverName'),'.database.windows.net,1433;Initial Catalog=',variables('databaseName'),';Persist Security Info=False;User ID=',variables('administratorLogin'),';Password=',variables('administratorLoginPassword'),';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
   },
   "resources": [
-    {
+    {//for notification history
       "type": "Microsoft.Storage/storageAccounts",
       "sku": {
         "name": "Standard_LRS",
@@ -69,6 +73,18 @@
       },
       "kind": "Storage",
       "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "properties": { }
+    },
+    {//for webjob
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "Storage",
+      "name": "[variables('timerjobStorageAccountName')]",
       "apiVersion": "2016-01-01",
       "location": "[resourceGroup().location]",
       "properties": { }
@@ -91,7 +107,8 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-08-01",
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+        "[concat('Microsoft.Web/serverfarms/', variables('serviceplanName'))]",
+        "[resourceId('Microsoft.Sql/servers/databases',concat(variables('sqlserverName'),'/',variables('databaseName')))]"
       ],
       "tags": {
         "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('serviceplanName'))]": "Resource",
@@ -99,7 +116,15 @@
       },
       "properties": {
         "name": "[variables('webappName')]",
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]",
+        "siteConfig": {
+          "connectionStrings": [
+            {
+              "name": "SqlConnectionString",
+              "connectionString": "[variables('sqlConnectionString')]"
+            }
+          ]
+        }
       },
       "resources": [
         {
@@ -115,28 +140,31 @@
           "properties": {
             "AzureConnectionString": "[variables('AzureConnectionString')]",
             "NotificationURI": "[variables('NotificationURI')]",
-            "TimerJobInterval": "[parameters('TimerJobInterval')]"
+            "Tenant": "[variables('NotificationURI')]",
+            "ClientId": "[variables('NotificationURI')]",
+            "ClientSecret": "[variables('NotificationURI')]",
+            "Resource": "[parameters('resourceURL')]"
           }
         },
         {
-            "name": "MSDeploy",
-            "type": "extensions",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2015-08-01",
-            "dependsOn": [
-                "[concat('Microsoft.Web/sites/', variables('webappName'))]"
-            ],
-            "tags": {
-                "displayName": "webDeploy"
-            },
-            "properties": {
-                "packageUri": "[parameters('webDeployPackageUri')]",
-                "dbType": "None",
-                "connectionString": "",
-                "setParameters": {
-                  "IIS Web Application Name": "[variables('webappName')]"
-                }
+          "name": "MSDeploy",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', variables('webappName'))]"
+          ],
+          "tags": {
+            "displayName": "webDeploy"
+          },
+          "properties": {
+            "packageUri": "[parameters('webDeployPackageUri')]",
+            "dbType": "None",
+            "connectionString": "",
+            "setParameters": {
+              "IIS Web Application Name": "[variables('webappName')]"
             }
+          }
         }
       ]
     },
@@ -210,7 +238,7 @@
             "Skype:Username": "[parameters('username')]",
             "Skype:Password": "[parameters('password')]",
             "Skype:ClientId": "[parameters('clientId')]",
-            "Skype:Tenant": "[parameters('tenant')]"
+            "Skype:Tenant": "[parameters('skypeTenant')]"
           }
         }
       ]

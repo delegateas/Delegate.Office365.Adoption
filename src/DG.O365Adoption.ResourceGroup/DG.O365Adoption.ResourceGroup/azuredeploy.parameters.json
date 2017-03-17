@@ -5,9 +5,6 @@
     "collation": {
       "value": "SQL_Latin1_General_CP1_CI_AS"
     },
-    "TimerJobInterval": {
-      "value": "60000"
-    },  
     "microsoftAppId": { "value": "YourAppId" },
     "microsoftAppPassword": { "value": "YourAppPassword" },
     "baseUrl": { "value": "https://directline.botframework.com/" },
@@ -18,7 +15,11 @@
     "aadInstance": { "value": "https://login.microsoftonline.com/{0}" },
     "username": { "value": "YourUsername" },
     "password": { "value": "YourPassword" },
+    "skypeClientId": { "value": "YourSkypeClinetId" },
+    "skypeTenant": { "value": "YourSkypeTenant" },
+    "resourceUrl": { "value": "https://graph.windows.net/" },
+    "tenant": { "value": "YourTenant" },
     "clientId": { "value": "YourClinetId" },
-    "tenant": { "value": "YourTenant" }
+    "clientSecret": { "value": "YourClientSecret" }
   }
 }
