@@ -48,7 +48,10 @@
     "resourceUrl": { "type": "string" },
     "tenant": { "type": "string" },
     "clientId": { "type": "string" },
-    "clientSecret": { "type": "string" }
+    "clientSecret": { "type": "string" },
+    "azureConnectionString": { "type": "string" },
+    "daleConnectionString": { "type": "string" },
+    "notificationURI": { "type": "string" }
   },
   "variables": {
     "storageAccountName": "[concat('dgadoption', uniqueString(resourceGroup().id))]",
@@ -61,11 +64,10 @@
     "webappName": "[concat('dgadoptionruleengine', uniqueString(resourceGroup().id))]",
     "botappName": "[concat('dgadoptionbot', uniqueString(resourceGroup().id))]",
     "NotificationURI": "[concat('https://',variables('webappName'),'azurewebsites.net/api/start')]",
-    "AzureConnectionString": "",/// ask!
     "sqlConnectionString": "[concat('Server=tcp:',variables('sqlserverName'),'.database.windows.net,1433;Initial Catalog=',variables('databaseName'),';Persist Security Info=False;User ID=',variables('administratorLogin'),';Password=',variables('administratorLoginPassword'),';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
   },
   "resources": [
-    {//for notification history
+    {
       "type": "Microsoft.Storage/storageAccounts",
       "sku": {
         "name": "Standard_LRS",
@@ -73,18 +75,6 @@
       },
       "kind": "Storage",
       "name": "[variables('storageAccountName')]",
-      "apiVersion": "2016-01-01",
-      "location": "[resourceGroup().location]",
-      "properties": { }
-    },
-    {//for webjob
-      "type": "Microsoft.Storage/storageAccounts",
-      "sku": {
-        "name": "Standard_LRS",
-        "tier": "Standard"
-      },
-      "kind": "Storage",
-      "name": "[variables('timerjobStorageAccountName')]",
       "apiVersion": "2016-01-01",
       "location": "[resourceGroup().location]",
       "properties": { }
@@ -108,7 +98,7 @@
       "apiVersion": "2015-08-01",
       "dependsOn": [
         "[concat('Microsoft.Web/serverfarms/', variables('serviceplanName'))]",
-        "[resourceId('Microsoft.Sql/servers/databases',concat(variables('sqlserverName'),'/',variables('databaseName')))]"
+        "[variables('databaseName')]"
       ],
       "tags": {
         "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('serviceplanName'))]": "Resource",
@@ -138,11 +128,12 @@
             "displayName": "appsettings"
           },
           "properties": {
-            "AzureConnectionString": "[variables('AzureConnectionString')]",
-            "NotificationURI": "[variables('NotificationURI')]",
-            "Tenant": "[variables('NotificationURI')]",
-            "ClientId": "[variables('NotificationURI')]",
-            "ClientSecret": "[variables('NotificationURI')]",
+            "AzureConnectionString": "[parameters('azureConnectionString')]",
+            "DaleConnectionString": "[parameters('daleConnectionString')]",
+            "NotificationURI": "[parameters('notificationURI')]",
+            "Tenant": "[parameters('tenant')]",
+            "ClientId": "[parameters('clientId')]",
+            "ClientSecret": "[parameters('clientSecret')]",
             "Resource": "[parameters('resourceURL')]"
           }
         },
@@ -182,30 +173,32 @@
         "administratorLoginPassword": "[variables('administratorLoginPassword')]"
       },
       "dependsOn": [ ],
-      "resources": [ ]
+      "resources": [
+        {
+          "name": "[variables('databaseName')]",
+          "type": "databases",
+          "location": "[resourceGroup().location]",
+          "kind": "v12.0,user",
+          "apiVersion": "2014-04-01-preview",
+          "properties": {
+            "edition": "[parameters('sqlEdition')]",
+            "collation": "[parameters('collation')]"
+          },
+          "dependsOn": [
+            "[variables('sqlserverName')]"
+          ],
+          "resources": [ ]
+        }
+      ]
     },
-    {
-      "name": "[concat(variables('sqlserverName'),variables('databaseName'))]",
-      "type": "Microsoft.Sql/servers/databases",
-      "location": "[resourceGroup().location]",
-      "kind": "v12.0,user",
-      "apiVersion": "2014-04-01-preview",
-      "properties": {
-        "edition": "[parameters('sqlEdition')]",
-        "collation": "[parameters('collation')]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Sql/servers', variables('sqlserverName'))]"
-      ],
-      "resources": [ ]
-    },
+    
     {
       "name": "[variables('botappName')]",
       "type": "Microsoft.Web/sites",
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-08-01",
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+        "[resourceId('Microsoft.Web/serverfarms', variables('serviceplanName'))]"
       ],
       "tags": {
         "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('serviceplanName'))]": "Resource",
@@ -221,7 +214,7 @@
           "type": "config",
           "apiVersion": "2015-08-01",
           "dependsOn": [
-            "[concat('Microsoft.Web/sites/', variables('botappName'))]"
+            "[resourceId('Microsoft.Web/sites', variables('botappName'))]"
           ],
           "tags": {
             "displayName": "appsettings"

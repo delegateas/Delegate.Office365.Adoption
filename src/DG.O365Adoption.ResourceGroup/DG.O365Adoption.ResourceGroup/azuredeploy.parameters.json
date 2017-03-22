@@ -20,6 +20,7 @@
     "resourceUrl": { "value": "https://graph.windows.net/" },
     "tenant": { "value": "YourTenant" },
     "clientId": { "value": "YourClinetId" },
-    "clientSecret": { "value": "YourClientSecret" }
-  }
+    "clientSecret": { "value": "YourClientSecret" },
+    "NotificationURI": {"value": "YourNotificationURI" }
+    }
 }
