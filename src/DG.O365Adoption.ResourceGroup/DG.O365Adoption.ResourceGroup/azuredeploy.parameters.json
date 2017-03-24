@@ -7,9 +7,8 @@
     },
     "microsoftAppId": { "value": "YourAppId" },
     "microsoftAppPassword": { "value": "YourAppPassword" },
-    "baseUrl": { "value": "https://directline.botframework.com/" },
+    "directLinebaseUrl": { "value": "https://directline.botframework.com/" },
     "directLineAuthToken": { "value": "YourDirectLineAuthToken" },
-    "redirectUri": { "value": "YourRedirectUri" },
     "autoDiscoveryUri": { "value": "https://webdir.online.lync.com/autodiscover/autodiscoverservice.svc/root" },
     "discoveryresource": { "value": "https://webdir.online.lync.com" },
     "aadInstance": { "value": "https://login.microsoftonline.com/{0}" },
@@ -21,6 +20,5 @@
     "tenant": { "value": "YourTenant" },
     "clientId": { "value": "YourClinetId" },
     "clientSecret": { "value": "YourClientSecret" },
-    "NotificationURI": {"value": "YourNotificationURI" }
     }
 }

@@ -31,9 +31,8 @@
     },
     "microsoftAppId": { "type": "string" },
     "microsoftAppPassword": { "type": "string" },
-    "baseUrl": { "type": "string" },
+    "directLinebaseUrl": { "type": "string" },
     "directLineAuthToken": { "type": "string" },
-    "redirectUri": { "type": "string" },
     "autoDiscoveryUri": { "type": "string" },
     "discoveryresource": { "type": "string" },
     "aadInstance": { "type": "string" },
@@ -51,7 +50,7 @@
     "clientSecret": { "type": "string" },
     "azureConnectionString": { "type": "string" },
     "daleConnectionString": { "type": "string" },
-    "notificationURI": { "type": "string" }
+
   },
   "variables": {
     "storageAccountName": "[concat('dgadoption', uniqueString(resourceGroup().id))]",
@@ -59,11 +58,12 @@
     "sqlserverName": "[concat('dgadoptionsqlserver', uniqueString(resourceGroup().id))]",
     "databaseName": "[concat('dgadoptionengine', uniqueString(resourceGroup().id))]",
     "administratorLogin": "[concat('admin', uniqueString(resourceGroup().id))]",
-    "administratorLoginPassword": "uniqueString(resourceGroup().id)",
+    "administratorLoginPassword": "[concat(uniqueString(resourceGroup().id),'+')]",
     "serviceplanName": "[concat('adoptionbotfarm',uniqueString(resourceGroup().id))]",
     "webappName": "[concat('dgadoptionruleengine', uniqueString(resourceGroup().id))]",
     "botappName": "[concat('dgadoptionbot', uniqueString(resourceGroup().id))]",
-    "NotificationURI": "[concat('https://',variables('webappName'),'azurewebsites.net/api/start')]",
+    "baseUrl": "[concat('https://',variables('webappName'),'.azurewebsites.net/')]",
+    "redirectUri": "[concat('https://',variables('botappName'),'.azurewebsites.net/api/messages')]",
     "sqlConnectionString": "[concat('Server=tcp:',variables('sqlserverName'),'.database.windows.net,1433;Initial Catalog=',variables('databaseName'),';Persist Security Info=False;User ID=',variables('administratorLogin'),';Password=',variables('administratorLoginPassword'),';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
   },
   "resources": [
@@ -108,10 +108,12 @@
         "name": "[variables('webappName')]",
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]",
         "siteConfig": {
+          "AlwaysOn": true,
           "connectionStrings": [
             {
               "name": "SqlConnectionString",
-              "connectionString": "[variables('sqlConnectionString')]"
+              "connectionString": "[variables('sqlConnectionString')]",
+              "type": 2
             }
           ]
         }
@@ -130,7 +132,9 @@
           "properties": {
             "AzureConnectionString": "[parameters('azureConnectionString')]",
             "DaleConnectionString": "[parameters('daleConnectionString')]",
-            "NotificationURI": "[parameters('notificationURI')]",
+            "AzureWebJobsDashboard": "[parameters('azureConnectionString')]",
+            "AzureWebJobsStorage": "[parameters('azureConnectionString')]",
+            "BaseUrl": "[variables('baseUrl')]",
             "Tenant": "[parameters('tenant')]",
             "ClientId": "[parameters('clientId')]",
             "ClientSecret": "[parameters('clientSecret')]",
@@ -191,7 +195,7 @@
         }
       ]
     },
-    
+
     {
       "name": "[variables('botappName')]",
       "type": "Microsoft.Web/sites",
@@ -206,7 +210,10 @@
       },
       "properties": {
         "name": "[variables('botappName')]",
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]"
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('serviceplanName'))]",
+        "siteConfig": {
+          "AlwaysOn": true
+        }
       },
       "resources": [
         {
@@ -222,9 +229,9 @@
           "properties": {
             "MicrosoftAppId": "[parameters('microsoftAppId')]",
             "MicrosoftAppPassword": "[parameters('microsoftAppPassword')]",
-            "BaseUrl": "[parameters('baseUrl')]",
+            "BaseUrl": "[parameters('directLinebaseUrl')]",
             "DirectLineAuthToken": "[parameters('directLineAuthToken')]",
-            "RedirectUri": "[parameters('redirectUri')]",
+            "RedirectUri": "[variables('redirectUri')]",
             "AutoDiscoveryUri": "[parameters('autoDiscoveryUri')]",
             "Resource": "[parameters('discoveryresource')]",
             "AadInstance": "[parameters('aadInstance')]",
