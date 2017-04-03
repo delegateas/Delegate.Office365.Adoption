@@ -114,7 +114,18 @@
               "name": "SqlConnectionString",
               "connectionString": "[variables('sqlConnectionString')]",
               "type": 2
+            },
+            {
+              "name": "AzureWebJobsDashboard",
+              "connectionString": "[parameters('azureConnectionString')]",
+              "type": 3
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "connectionString": "[parameters('azureConnectionString')]",
+              "type": 3
             }
+
           ]
         }
       },
@@ -130,10 +141,8 @@
             "displayName": "appsettings"
           },
           "properties": {
-            "AzureConnectionString": "[parameters('azureConnectionString')]",
+            "RuleEngineConnectionString": "[parameters('azureConnectionString')]",
             "DaleConnectionString": "[parameters('daleConnectionString')]",
-            "AzureWebJobsDashboard": "[parameters('azureConnectionString')]",
-            "AzureWebJobsStorage": "[parameters('azureConnectionString')]",
             "BaseUrl": "[variables('baseUrl')]",
             "Tenant": "[parameters('tenant')]",
             "ClientId": "[parameters('clientId')]",
